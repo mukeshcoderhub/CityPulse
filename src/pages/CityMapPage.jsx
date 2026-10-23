@@ -9,7 +9,7 @@ import {
   ZoomControl,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { getLatestIssues } from "../utils/issues";
+import { getLatestReports } from "../services/reportService";
 
 const JAIPUR_CENTER = [26.9124, 75.7873];
 
@@ -20,14 +20,18 @@ const STATUS_COLORS = {
   "needs review": "#dc2626",
 };
 
+const normalizeStatus = (status) =>
+  String(status || "reported")
+    .toLowerCase()
+    .replace(/[-_]/g, " ");
+
 const getStatusColor = (status) =>
-  STATUS_COLORS[String(status || "reported").toLowerCase()] ||
-  "#64748b";
+  STATUS_COLORS[normalizeStatus(status)] || "#64748b";
 
 const formatStatus = (status) =>
-  String(status || "reported")
-    .replace(/[-_]/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  normalizeStatus(status).replace(/\b\w/g, (letter) =>
+    letter.toUpperCase()
+  );
 
 const formatDate = (date) => {
   if (!date) return "Date unavailable";
@@ -47,39 +51,45 @@ const formatDate = (date) => {
 
 const CityMapPage = () => {
   const [issues, setIssues] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
-    const loadIssues = () => setIssues(getLatestIssues());
+    let active = true;
 
-    loadIssues();
+    const loadIssues = async () => {
+      try {
+        setError("");
+        const reports = await getLatestReports();
 
-    window.addEventListener("citypulse-issues-change", loadIssues);
+        if (active) {
+          setIssues(reports);
+        }
+      } catch (err) {
+        console.error("Failed to load map reports:", err);
 
-    // Also refresh if LocalStorage changes in another browser tab.
-    const handleStorage = (event) => {
-      if (!event.key || event.key === "citypulse-issues") {
-        loadIssues();
+        if (active) {
+          setError("Unable to load reports. Please refresh and try again.");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
     };
 
-    window.addEventListener("storage", handleStorage);
+    loadIssues();
 
     return () => {
-      window.removeEventListener("citypulse-issues-change", loadIssues);
-      window.removeEventListener("storage", handleStorage);
+      active = false;
     };
   }, []);
 
   const categories = useMemo(
-    () => [
-      ...new Set(
-        issues
-          .map((issue) => issue.category)
-          .filter(Boolean)
-      ),
-    ].sort(),
+    () =>
+      [...new Set(issues.map((issue) => issue.category).filter(Boolean))].sort(),
     [issues]
   );
 
@@ -107,16 +117,11 @@ const CityMapPage = () => {
     () =>
       validIssues.filter((issue) => {
         const matchesCategory =
-          categoryFilter === "all" ||
-          issue.category === categoryFilter;
-
-        const normalizedStatus = String(
-          issue.status || "reported"
-        ).toLowerCase();
+          categoryFilter === "all" || issue.category === categoryFilter;
 
         const matchesStatus =
           statusFilter === "all" ||
-          normalizedStatus === statusFilter;
+          normalizeStatus(issue.status) === statusFilter;
 
         return matchesCategory && matchesStatus;
       }),
@@ -126,17 +131,14 @@ const CityMapPage = () => {
   return (
     <div className="min-h-screen bg-[#fafaf8] px-4 py-6 sm:px-6">
       <div className="mx-auto max-w-7xl">
-        {/* Page heading */}
         <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="text-sm font-semibold text-[#ec4952]">
               JAIPUR, RAJASTHAN
             </p>
-
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#202522]">
               City Map
             </h1>
-
             <p className="mt-2 text-sm text-[#737873]">
               Explore reported city problems by location.
             </p>
@@ -150,7 +152,22 @@ const CityMapPage = () => {
           </Link>
         </div>
 
-        {/* Statistics */}
+        {error && (
+          <div
+            role="alert"
+            className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+          >
+            {error}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="ml-2 font-semibold underline"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-[#e8e9e4] bg-white p-4">
             <p className="text-sm text-[#737873]">Total reports</p>
@@ -174,7 +191,6 @@ const CityMapPage = () => {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#e8e9e4] bg-white p-4 sm:flex-row">
           <div className="flex-1">
             <label
@@ -183,13 +199,10 @@ const CityMapPage = () => {
             >
               Issue category
             </label>
-
             <select
               id="map-category"
               value={categoryFilter}
-              onChange={(event) =>
-                setCategoryFilter(event.target.value)
-              }
+              onChange={(event) => setCategoryFilter(event.target.value)}
               className="w-full rounded-xl border border-[#dedfd9] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#ec4952]"
             >
               <option value="all">All categories</option>
@@ -208,13 +221,10 @@ const CityMapPage = () => {
             >
               Issue status
             </label>
-
             <select
               id="map-status"
               value={statusFilter}
-              onChange={(event) =>
-                setStatusFilter(event.target.value)
-              }
+              onChange={(event) => setStatusFilter(event.target.value)}
               className="w-full rounded-xl border border-[#dedfd9] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#ec4952]"
             >
               <option value="all">All statuses</option>
@@ -237,7 +247,6 @@ const CityMapPage = () => {
           </button>
         </div>
 
-        {/* Map */}
         <div className="relative overflow-hidden rounded-2xl border border-[#e8e9e4] bg-white shadow-sm">
           <MapContainer
             center={JAIPUR_CENTER}
@@ -260,6 +269,7 @@ const CityMapPage = () => {
               ];
 
               const color = getStatusColor(issue.status);
+              const image = issue.imageUrl || issue.image;
 
               return (
                 <CircleMarker
@@ -275,9 +285,9 @@ const CityMapPage = () => {
                 >
                   <Popup>
                     <div className="w-[220px]">
-                      {issue.image && (
+                      {image && (
                         <img
-                          src={issue.image}
+                          src={image}
                           alt={issue.title || "Reported issue"}
                           className="mb-3 h-28 w-full rounded-lg object-cover"
                         />
@@ -302,7 +312,7 @@ const CityMapPage = () => {
                       <div className="mt-3 flex items-center justify-between gap-2">
                         <span
                           style={{
-                            backgroundColor: color + "18",
+                            backgroundColor: `${color}18`,
                             color,
                           }}
                           className="rounded-full px-2 py-1 text-xs font-semibold"
@@ -328,19 +338,25 @@ const CityMapPage = () => {
             })}
           </MapContainer>
 
-          {filteredIssues.length === 0 && (
+          {loading && (
+            <div className="absolute left-1/2 top-4 z-[1000] -translate-x-1/2 rounded-xl border border-[#e8e9e4] bg-white/95 px-4 py-3 text-sm text-[#737873] shadow-sm">
+              Loading city reports...
+            </div>
+          )}
+
+          {!loading && !error && filteredIssues.length === 0 && (
             <div className="pointer-events-none absolute left-1/2 top-4 z-[1000] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-xl border border-[#e8e9e4] bg-white/95 p-4 text-center shadow-sm">
               <p className="font-semibold text-[#202522]">
                 No matching locations
               </p>
               <p className="mt-1 text-sm text-[#737873]">
-                Try changing your filters or report an issue with GPS enabled.
+                Try changing your filters or report an issue with valid GPS
+                coordinates.
               </p>
             </div>
           )}
         </div>
 
-        {/* Legend */}
         <div className="mt-4 flex flex-wrap gap-x-5 gap-y-3 rounded-2xl border border-[#e8e9e4] bg-white p-4">
           {[
             ["reported", "Reported"],
@@ -351,9 +367,7 @@ const CityMapPage = () => {
             <div key={status} className="flex items-center gap-2">
               <span
                 className="h-3 w-3 rounded-full"
-                style={{
-                  backgroundColor: getStatusColor(status),
-                }}
+                style={{ backgroundColor: getStatusColor(status) }}
               />
               <span className="text-sm text-[#555b56]">{label}</span>
             </div>
