@@ -161,34 +161,64 @@ import { useState } from "react";
 
 const demoLocations = [
   {
-    address: "Tonk Road, near Gopalpura, Jaipur, Rajasthan",
-    lat: 26.8685,
-    lng: 75.8069,
+    address: "Albert Hall Museum, Ram Niwas Garden, Jaipur, Rajasthan",
+    lat: 26.9115,
+    lng: 75.8190,
   },
   {
-    address: "Malviya Nagar, near World Trade Park, Jaipur, Rajasthan",
-    lat: 26.8545,
-    lng: 75.8058,
+    address: "Hawa Mahal Road, Badi Choupad, Jaipur, Rajasthan",
+    lat: 26.9239,
+    lng: 75.8267,
   },
   {
-    address: "Mansarovar, Jaipur, Rajasthan",
-    lat: 26.8578,
-    lng: 75.7648,
+    address: "Sindhi Camp Bus Stand, Jaipur, Rajasthan",
+    lat: 26.9219,
+    lng: 75.7997,
   },
   {
-    address: "Vaishali Nagar, Jaipur, Rajasthan",
-    lat: 26.9124,
-    lng: 75.7397,
+    address: "Ajmer Road, near Civil Lines, Jaipur, Rajasthan",
+    lat: 26.9084,
+    lng: 75.7815,
   },
   {
-    address: "C-Scheme, Jaipur, Rajasthan",
-    lat: 26.9121,
-    lng: 75.7953,
+    address: "Raja Park, Jaipur, Rajasthan",
+    lat: 26.8967,
+    lng: 75.8272,
   },
   {
-    address: "Jagatpura, Jaipur, Rajasthan",
-    lat: 26.8393,
-    lng: 75.8652,
+    address: "Bani Park, Jaipur, Rajasthan",
+    lat: 26.9298,
+    lng: 75.7921,
+  },
+  {
+    address: "Jhotwara Road, Jaipur, Rajasthan",
+    lat: 26.9412,
+    lng: 75.7765,
+  },
+  {
+    address: "Vidyadhar Nagar, Jaipur, Rajasthan",
+    lat: 26.9602,
+    lng: 75.7795,
+  },
+  {
+    address: "Pratap Nagar, Sanganer, Jaipur, Rajasthan",
+    lat: 26.8138,
+    lng: 75.8203,
+  },
+  {
+    address: "Sitapura Industrial Area, Jaipur, Rajasthan",
+    lat: 26.7845,
+    lng: 75.8370,
+  },
+  {
+    address: "Amer Road, near Jal Mahal, Jaipur, Rajasthan",
+    lat: 26.9535,
+    lng: 75.8467,
+  },
+  {
+    address: "Gandhi Nagar Railway Station, Jaipur, Rajasthan",
+    lat: 26.8917,
+    lng: 75.8050,
   },
 ];
 
