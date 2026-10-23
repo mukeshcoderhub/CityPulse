@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -68,8 +67,12 @@ const Navbar = () => {
           className="flex shrink-0 items-center gap-2.5"
           aria-label="CityPulse home"
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#253B35] text-[#F5D7CA]">
-            <MapPin size={22} strokeWidth={2} />
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl">
+            <img
+              src="/favicon.png"
+              alt="CityPulse Logo"
+              className="h-full w-full object-contain"
+            />
           </span>
 
           <span className="flex flex-col">
