@@ -1,10 +1,8 @@
-
 import { useCallback, useEffect, useState } from "react";
 import {
   MapPin,
   ExternalLink,
   ShieldCheck,
-  Copy,
   CheckCircle2,
   AlertTriangle,
   CalendarDays,
@@ -18,18 +16,9 @@ import {
 } from "lucide-react";
 
 import { evaluateSignal } from "../utils/governance";
-import {
-  getReportVotes,
-  saveReportVote,
-} from "../services/voteService";
-import {
-  isReportSaved,
-  toggleSavedReport,
-} from "../services/wishlistService";
-import {
-  getReportReplies,
-  addReportReply,
-} from "../services/replyService";
+import { getReportVotes, saveReportVote } from "../services/voteService";
+import { isReportSaved, toggleSavedReport } from "../services/wishlistService";
+import { getReportReplies, addReportReply } from "../services/replyService";
 
 const SIGNALS = [
   {
@@ -38,13 +27,6 @@ const SIGNALS = [
     icon: CheckCircle2,
     color: "text-emerald-700",
     active: "border-emerald-300 bg-emerald-50",
-  },
-  {
-    id: "duplicate",
-    label: "Duplicate",
-    icon: Copy,
-    color: "text-amber-700",
-    active: "border-amber-300 bg-amber-50",
   },
   {
     id: "resolved",
@@ -122,7 +104,7 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
   // Report image state
   const [imageError, setImageError] = useState(false);
 
-  // Collapsible text-only comments
+  // Comments state
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
@@ -131,17 +113,14 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
   const [commentError, setCommentError] = useState("");
 
   const status = normalizeStatus(issue.status);
-  const statusClass =
-    STATUS_STYLES[status] || STATUS_STYLES.reported;
+  const statusClass = STATUS_STYLES[status] || STATUS_STYLES.reported;
 
   const location = issue.location || {};
   const latitude = location.lat ?? location.latitude;
   const longitude = location.lng ?? location.longitude;
 
   const address =
-    location.address ||
-    issue.address ||
-    "Location details unavailable";
+    location.address || issue.address || "Location details unavailable";
 
   const hasCoordinates =
     latitude != null &&
@@ -179,17 +158,12 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
 
       const foundVote =
         result?.currentVote ||
-        voteList.find(
-          (vote) =>
-            vote.userId === userId ||
-            vote.uid === userId
-        )?.signal ||
+        voteList.find((vote) => vote.userId === userId || vote.uid === userId)
+          ?.signal ||
         null;
 
       setCurrentVote(
-        typeof foundVote === "string"
-          ? foundVote
-          : foundVote?.signal || null
+        typeof foundVote === "string" ? foundVote : foundVote?.signal || null,
       );
     } catch (error) {
       console.error("Failed to load report votes:", error);
@@ -259,7 +233,7 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
       setVoteError(
         error.code === "permission-denied"
           ? "Firebase rules blocked this vote."
-          : error.message || "Unable to save your vote."
+          : error.message || "Unable to save your vote.",
       );
     } finally {
       setSavingVote(false);
@@ -285,9 +259,7 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
     } catch (error) {
       console.error("Failed to update Wishlist:", error);
 
-      setBookmarkError(
-        error.message || "Unable to update your Wishlist."
-      );
+      setBookmarkError(error.message || "Unable to update your Wishlist.");
     } finally {
       setSavingBookmark(false);
     }
@@ -337,9 +309,7 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
         reportId: issue.id,
         userId,
         authorName:
-          currentUser?.displayName ||
-          currentUser?.email ||
-          "Community member",
+          currentUser?.displayName || currentUser?.email || "Community member",
         text,
         type: "comment",
       });
@@ -352,7 +322,7 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
       setCommentError(
         error.code === "permission-denied"
           ? "Firebase rules blocked this comment. Check your Firestore rules."
-          : error.message || "Could not post your comment."
+          : error.message || "Could not post your comment.",
       );
     } finally {
       setCommentSaving(false);
@@ -372,10 +342,7 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
   };
 
   const getPercentage = (signal) => {
-    const total = SIGNALS.reduce(
-      (sum, item) => sum + getCount(item.id),
-      0
-    );
+    const total = SIGNALS.reduce((sum, item) => sum + getCount(item.id), 0);
 
     if (total === 0) return 0;
 
@@ -388,10 +355,7 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
       : issue.image?.url || issue.image?.src || "";
 
   const evidence =
-    issue.resolutionEvidence ||
-    issue.resolutionImage ||
-    issue.evidence ||
-    null;
+    issue.resolutionEvidence || issue.resolutionImage || issue.evidence || null;
 
   return (
     <article className="overflow-hidden rounded-2xl border border-[#E9E1D9] bg-white shadow-sm transition hover:shadow-md">
@@ -428,9 +392,7 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
             type="button"
             onClick={handleBookmark}
             disabled={savingBookmark}
-            aria-label={
-              isSaved ? "Remove from Wishlist" : "Save to Wishlist"
-            }
+            aria-label={isSaved ? "Remove from Wishlist" : "Save to Wishlist"}
             title={isSaved ? "Remove from Wishlist" : "Save to Wishlist"}
             className={`flex h-9 w-9 items-center justify-center rounded-xl border transition disabled:opacity-50 ${
               isSaved
@@ -441,10 +403,7 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
             {savingBookmark ? (
               <LoaderCircle size={17} className="animate-spin" />
             ) : (
-              <Bookmark
-                size={18}
-                fill={isSaved ? "currentColor" : "none"}
-              />
+              <Bookmark size={18} fill={isSaved ? "currentColor" : "none"} />
             )}
           </button>
         </div>
@@ -535,8 +494,8 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
         </div>
 
         <p className="mt-1 text-xs leading-5 text-[#85877F]">
-          Help the community verify whether this report is genuine,
-          duplicated, resolved, or suspicious.
+          Help the community verify whether this report is genuine, resolved, or
+          suspicious.
         </p>
 
         {isAuthor && (
@@ -551,7 +510,7 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
           </p>
         )}
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {SIGNALS.map((signal) => {
             const SignalIcon = signal.icon;
             const selected = currentVote === signal.id;
@@ -572,10 +531,7 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
                   <SignalIcon size={17} className={signal.color} />
 
                   {selected && (
-                    <CheckCircle2
-                      size={14}
-                      className={signal.color}
-                    />
+                    <CheckCircle2 size={14} className={signal.color} />
                   )}
                 </div>
 
@@ -598,19 +554,13 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
         </div>
 
         {savingVote && (
-          <p className="mt-3 text-xs text-[#85877F]">
-            Saving your vote...
-          </p>
+          <p className="mt-3 text-xs text-[#85877F]">Saving your vote...</p>
         )}
 
         {/* Governance results */}
         <div className="mt-4 space-y-2">
           {SIGNALS.map((signal) => {
-            const result = evaluateSignal(
-              votes,
-              signal.id,
-              Boolean(evidence)
-            );
+            const result = evaluateSignal(votes, signal.id, Boolean(evidence));
 
             if (!result?.qualified) return null;
 
@@ -646,17 +596,16 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
               Resolution evidence is available
             </p>
 
-            {typeof evidence === "string" &&
-              evidence.startsWith("http") && (
-                <a
-                  href={evidence}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 underline"
-                >
-                  View evidence <ExternalLink size={12} />
-                </a>
-              )}
+            {typeof evidence === "string" && evidence.startsWith("http") && (
+              <a
+                href={evidence}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 underline"
+              >
+                View evidence <ExternalLink size={12} />
+              </a>
+            )}
           </div>
         )}
       </section>
@@ -763,10 +712,7 @@ const IssueCard = ({ issue, currentUser, onBookmarkChange }) => {
                 </p>
               ) : comments.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-[#E9E1D9] bg-[#FFFCF8] px-4 py-6 text-center">
-                  <MessageCircle
-                    size={24}
-                    className="mx-auto text-[#B8A89B]"
-                  />
+                  <MessageCircle size={24} className="mx-auto text-[#B8A89B]" />
 
                   <p className="mt-2 text-sm font-semibold text-[#253B35]">
                     No comments yet
