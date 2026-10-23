@@ -1,36 +1,30 @@
 
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { login } from '../utils/auth'
+import { useAuth } from '../context/AuthContext'
 
 const Login = () => {
-  const [mobile, setMobile] = useState('')
-  const [password, setPassword] = useState('')
+  const { loginWithGoogle } = useAuth()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleGoogleLogin = async () => {
     setError('')
-
-    if (!/^[6-9]\d{9}$/.test(mobile)) {
-      setError('Enter a valid 10-digit Indian mobile number.')
-      return
-    }
-
-    if (!password) {
-      setError('Please enter your password.')
-      return
-    }
-
     setLoading(true)
 
     try {
-      await login(mobile, password)
+      await loginWithGoogle()
       navigate('/')
     } catch (err) {
-      setError(err.message)
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('Sign-in was cancelled. Please try again.')
+      } else if (err.code === 'auth/popup-blocked') {
+        setError('Your browser blocked the sign-in popup. Allow popups and try again.')
+      } else {
+        setError('Google sign-in failed. Please try again.')
+        console.error('Google sign-in error:', err)
+      }
     } finally {
       setLoading(false)
     }
@@ -44,76 +38,45 @@ const Login = () => {
         </Link>
 
         <h1 className="mt-7 text-3xl font-semibold tracking-tight">
-          Welcome back
+          Welcome to CityPulse
         </h1>
+
         <p className="mt-2 text-sm text-[#737873]">
-          Log in to continue to your community.
+          Sign in to report city problems and help your community.
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-7 space-y-5">
-          <div>
-            <label htmlFor="mobile" className="mb-2 block text-sm font-medium">
-              Mobile number
-            </label>
-            <input
-              id="mobile"
-              type="tel"
-              inputMode="numeric"
-              autoComplete="tel"
-              maxLength={10}
-              value={mobile}
-              onChange={e => setMobile(e.target.value.replace(/\D/g, ''))}
-              placeholder="Enter 10-digit mobile number"
-              className="w-full rounded-lg border border-[#deded8] px-4 py-3 outline-none transition focus:border-[#202522]"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="mb-2 block text-sm font-medium">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              className="w-full rounded-lg border border-[#deded8] px-4 py-3 outline-none transition focus:border-[#202522]"
-              required
-            />
-          </div>
-
-          <div className="text-right">
-            <Link
-              to="/forgot-password"
-              className="text-sm font-medium text-[#444a45] hover:underline"
-            >
-              Forgot password?
-            </Link>
-          </div>
-
-          {error && (
-            <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-[#202522] py-3 font-medium text-white transition hover:bg-[#383e39] disabled:opacity-60"
+        {error && (
+          <p
+            role="alert"
+            className="mt-6 rounded-lg bg-red-50 p-3 text-sm text-red-700"
           >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
+            {error}
+          </p>
+        )}
 
-        <p className="mt-6 text-center text-sm text-[#737873]">
-          Don't have an account?{' '}
-          <Link to="/signup" className="font-semibold text-[#202522] hover:underline">
-            Sign up
-          </Link>
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="mt-7 flex w-full items-center justify-center gap-3 rounded-lg border border-[#deded8] bg-white py-3 font-medium text-[#202522] transition hover:bg-[#f7f7f4] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 48 48"
+            className="h-5 w-5"
+          >
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z" />
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 38.01 46.98 31.91 46.98 24.55Z" />
+            <path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.56 10.78l7.97-6.19Z" />
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.14 1.45-4.89 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.94l-7.98 6.19C6.51 43.62 14.62 48 24 48Z" />
+          </svg>
+
+          {loading ? 'Signing in...' : 'Continue with Google'}
+        </button>
+
+        <p className="mt-6 text-center text-xs leading-5 text-[#737873]">
+          By continuing, you agree to use CityPulse responsibly and help
+          build a better community.
         </p>
       </div>
     </main>

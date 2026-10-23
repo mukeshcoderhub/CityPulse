@@ -1,80 +1,175 @@
 
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { getCurrentUser, logout } from '../utils/auth'
+import { useEffect, useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import {
+  Menu,
+  MapPin,
+  Search,
+  Heart,
+  UserRound,
+  LogIn,
+  LogOut,
+  Plus,
+} from "lucide-react";
+
+import { auth } from "../firebase/config";
 
 const Navbar = () => {
-  const [user, setUser] = useState(getCurrentUser)
-  const navigate = useNavigate()
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const isLoginPage = location.pathname === "/login";
 
   useEffect(() => {
-    const updateUser = () => setUser(getCurrentUser())
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+    });
 
-    window.addEventListener('citypulse-auth-change', updateUser)
-    window.addEventListener('storage', updateUser)
+    return unsubscribe;
+  }, []);
 
-    return () => {
-      window.removeEventListener('citypulse-auth-change', updateUser)
-      window.removeEventListener('storage', updateUser)
+  const toggleSidebar = () => {
+    window.dispatchEvent(new Event("citypulse:toggle-sidebar"));
+  };
+
+  const closeSidebar = () => {
+    window.dispatchEvent(new Event("citypulse:close-sidebar"));
+  };
+
+  const handleLogout = async () => {
+    try {
+      closeSidebar();
+      await signOut(auth);
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      alert("Unable to log out. Please try again.");
     }
-  }, [])
+  };
 
-  const handleAccount = () => {
-    if (user) {
-      logout()
-      navigate('/')
-    } else {
-      navigate('/login')
-    }
-  }
+  const navLinks = [
+    { name: "Explore", path: "/explore", icon: Search },
+    { name: "Wishlist", path: "/wishlist", icon: Heart },
+    { name: "Profile", path: "/profile", icon: UserRound },
+  ];
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#e5e5e0] bg-[#f7f7f5]">
-      <nav className="mx-auto flex h-[68px] max-w-[1440px] items-center justify-between px-5 md:px-8">
-        <Link to="/" className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#202522] text-white">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              className="h-5 w-5"
-            >
-              <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
-              <circle cx="12" cy="10" r="2.5" />
-            </svg>
-          </span>
-
-          <span className="text-lg font-semibold tracking-tight">
-            CityPulse
-          </span>
-        </Link>
-
-        <div className="hidden items-center gap-8 md:flex">
-          <Link
-            to="/"
-            className="text-sm text-[#626762] transition hover:text-[#202522]"
-          >
-            Explore
-          </Link>
-
-          <a
-            href="#about"
-            className="text-sm text-[#626762] transition hover:text-[#202522]"
-          >
-            About
-          </a>
-        </div>
-
-        <button
-          onClick={handleAccount}
-          className="rounded-lg bg-[#202522] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#383e39]"
+    <header className="relative z-[60] h-[68px] border-b border-[#E9E1D9] bg-[#FFFCF8]">
+      <div className="mx-auto flex h-full items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        {/* Brand */}
+        <NavLink
+          to="/"
+          onClick={closeSidebar}
+          className="flex shrink-0 items-center gap-2.5"
+          aria-label="CityPulse home"
         >
-          {user ? `Logout · ${user.name.split(' ')[0]}` : 'Login'}
-        </button>
-      </nav>
-    </header>
-  )
-}
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#253B35] text-[#F5D7CA]">
+            <MapPin size={22} strokeWidth={2} />
+          </span>
 
-export default Navbar
+          <span className="flex flex-col">
+            <span className="text-lg font-bold tracking-tight text-[#253B35]">
+              CityPulse
+            </span>
+            <span className="-mt-0.5 hidden text-[10px] tracking-wide text-[#85877F] sm:block">
+              Your city, your voice.
+            </span>
+          </span>
+        </NavLink>
+
+        {/* Desktop navigation */}
+        {!isLoginPage && (
+          <nav className="hidden items-center gap-1 md:flex">
+            {navLinks.map(({ name, path, icon: Icon }) => (
+              <NavLink
+                key={path}
+                to={path}
+                className={({ isActive }) =>
+                  `flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                    isActive
+                      ? "bg-[#253B35] text-white"
+                      : "text-[#626A63] hover:bg-[#F7E9E5] hover:text-[#A84346]"
+                  }`
+                }
+              >
+                <Icon size={16} />
+                {name}
+              </NavLink>
+            ))}
+          </nav>
+        )}
+
+        {/* Right-side actions */}
+        <div className="flex shrink-0 items-center gap-2">
+          {!isLoginPage && (
+            <>
+              {/* Report shortcut for signed-in users */}
+              {user && (
+                <NavLink
+                  to="/report"
+                  onClick={closeSidebar}
+                  className="hidden items-center gap-2 rounded-xl bg-[#B84C50] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#A84346] sm:flex"
+                >
+                  <Plus size={17} />
+                  Report Issue
+                </NavLink>
+              )}
+
+              {/* Login for logged-out users */}
+              {!authLoading && !user && (
+                <NavLink
+                  to="/login"
+                  className="flex items-center gap-2 rounded-xl bg-[#253B35] px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-[#344E46] sm:px-4"
+                >
+                  <LogIn size={17} />
+                  <span>Login</span>
+                </NavLink>
+              )}
+
+              {/* Account menu shortcut for signed-in users */}
+              {!authLoading && user && (
+                <NavLink
+                  to="/profile"
+                  onClick={closeSidebar}
+                  aria-label="Your profile"
+                  title={user.displayName || user.email || "Your profile"}
+                  className="hidden h-10 w-10 items-center justify-center rounded-xl border border-[#E9E1D9] bg-white text-[#253B35] transition hover:bg-[#F7E9E5] sm:flex"
+                >
+                  <UserRound size={19} />
+                </NavLink>
+              )}
+
+              {/* One mobile sidebar toggle */}
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                aria-label="Toggle navigation sidebar"
+                aria-controls="mobile-sidebar"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E9E1D9] bg-[#FFFCF8] text-[#253B35] transition hover:bg-[#F7E9E5] md:hidden"
+              >
+                <Menu size={22} />
+              </button>
+            </>
+          )}
+
+          {/* Login page: offer home navigation */}
+          {isLoginPage && (
+            <NavLink
+              to="/"
+              className="rounded-xl border border-[#E9E1D9] px-3 py-2 text-sm font-medium text-[#253B35] hover:bg-[#F7E9E5]"
+            >
+              Home
+            </NavLink>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export default Navbar;

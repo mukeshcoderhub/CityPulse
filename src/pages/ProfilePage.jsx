@@ -1,44 +1,82 @@
 
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { getCurrentUser, logout } from "../utils/auth";
-import { getLatestIssues } from "../utils/issues";
+import { Link } from "react-router-dom";
+import {
+  Bookmark,
+  FileText,
+  PlusCircle,
+  UserRound,
+  LogOut,
+  MapPin,
+  RefreshCw,
+} from "lucide-react";
+
+import { useAuth } from "../context/AuthContext";
+import { getLatestReports } from "../services/reportService";
 
 const ProfilePage = () => {
-  const [user, setUser] = useState(getCurrentUser());
+  const { user, logout, loading: authLoading } = useAuth();
+
   const [issues, setIssues] = useState([]);
-  const navigate = useNavigate();
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [reportsError, setReportsError] = useState("");
+  const [logoutLoading, setLogoutLoading] = useState(false);
 
   useEffect(() => {
-    const loadUser = () => setUser(getCurrentUser());
-    const loadIssues = () => setIssues(getLatestIssues());
+    if (authLoading) return;
 
-    loadUser();
+    let active = true;
+
+    const loadIssues = async () => {
+      if (!user) {
+        setIssues([]);
+        setReportsLoading(false);
+        return;
+      }
+
+      setReportsLoading(true);
+      setReportsError("");
+
+      try {
+        const reports = await getLatestReports();
+
+        if (active) {
+          setIssues(
+            reports.filter((issue) => issue.authorId === user.uid)
+          );
+        }
+      } catch (error) {
+        console.error("Failed to load profile reports:", error);
+
+        if (active) {
+          setReportsError(
+            "Unable to load your contribution statistics."
+          );
+        }
+      } finally {
+        if (active) setReportsLoading(false);
+      }
+    };
+
     loadIssues();
 
-    window.addEventListener("citypulse-auth-change", loadUser);
-    window.addEventListener("citypulse-issues-change", loadIssues);
-
     return () => {
-      window.removeEventListener("citypulse-auth-change", loadUser);
-      window.removeEventListener("citypulse-issues-change", loadIssues);
+      active = false;
     };
-  }, []);
+  }, [user, authLoading]);
 
-  const userId = user?.id ?? user?.uid;
+  const myIssues = issues;
 
-  const myIssues = issues.filter(
-    (issue) =>
-      userId != null &&
-      issue.authorId != null &&
-      String(issue.authorId) === String(userId)
-  );
+  const resolvedCount = myIssues.filter((issue) => {
+    const status = String(issue.status || "reported")
+      .toLowerCase()
+      .replace(/[-_]/g, " ");
 
-  const resolvedCount = myIssues.filter(
-    (issue) => issue.status === "resolved"
-  ).length;
+    return status === "resolved";
+  }).length;
 
-  const name = user?.name || "CityPulse Member";
+  const name = user?.displayName || "CityPulse Member";
+
   const initials = name
     .trim()
     .split(/\s+/)
@@ -46,30 +84,46 @@ const ProfilePage = () => {
     .map((part) => part[0]?.toUpperCase())
     .join("");
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
+  const handleLogout = async () => {
+    if (logoutLoading) return;
+
+    setLogoutLoading(true);
+
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout failed:", error);
+      setLogoutLoading(false);
+    }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#FFFCF8] px-4 py-12 text-center text-[#737873]">
+        Checking your account...
+      </div>
+    );
+  }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#fafaf8] px-4 py-12">
-        <div className="mx-auto max-w-lg rounded-2xl border border-[#e8e9e4] bg-white p-8 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#fcebed] text-2xl">
-            👤
+      <div className="min-h-screen bg-[#FFFCF8] px-4 py-12">
+        <div className="mx-auto max-w-lg rounded-2xl border border-[#E9E1D9] bg-white p-8 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#F7E9E5] text-[#A84346]">
+            <UserRound size={30} />
           </div>
 
-          <h1 className="mt-4 text-2xl font-bold text-[#202522]">
+          <h1 className="mt-4 text-2xl font-bold text-[#253B35]">
             Your profile
           </h1>
 
-          <p className="mt-2 text-sm text-[#737873]">
+          <p className="mt-2 text-sm leading-6 text-[#737873]">
             Log in to view your account and community contributions.
           </p>
 
           <Link
             to="/login"
-            className="mt-5 inline-flex rounded-xl bg-[#ec4952] px-5 py-3 font-semibold text-white hover:bg-[#d93843]"
+            className="mt-5 inline-flex rounded-xl bg-[#253B35] px-5 py-3 font-semibold text-white transition hover:bg-[#344D44]"
           >
             Log in
           </Link>
@@ -78,67 +132,102 @@ const ProfilePage = () => {
     );
   }
 
+  const quickActions = [
+    {
+      to: "/my-reports",
+      title: "View my reports",
+      description: "Check the status of your submissions.",
+      icon: FileText,
+      iconClass: "bg-[#E8EFE9] text-[#355747]",
+    },
+    {
+      to: "/wishlist",
+      title: "My Wishlist",
+      description: "View the city issues you've saved.",
+      icon: Bookmark,
+      iconClass: "bg-[#F7E9E5] text-[#A84346]",
+    },
+    {
+      to: "/report",
+      title: "Report a city problem",
+      description: "Help make Jaipur a better place.",
+      icon: PlusCircle,
+      iconClass: "bg-[#F5EEE0] text-[#92713D]",
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-[#fafaf8] px-4 py-6 sm:px-6">
+    <div className="min-h-screen bg-[#FFFCF8] px-4 py-6 sm:px-6">
       <div className="mx-auto max-w-4xl">
         {/* Page heading */}
         <div className="mb-6">
-          <p className="text-sm font-semibold text-[#ec4952]">
+          <p className="text-xs font-bold tracking-[0.16em] text-[#A84346]">
             YOUR ACCOUNT
           </p>
 
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#202522]">
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#253B35]">
             My Profile
           </h1>
 
-          <p className="mt-2 text-sm text-[#737873]">
+          <p className="mt-2 text-sm leading-6 text-[#737873]">
             Manage your account and track your contribution to Jaipur.
           </p>
         </div>
 
         {/* Profile card */}
-        <section className="overflow-hidden rounded-2xl border border-[#e8e9e4] bg-white">
-          <div className="h-28 bg-gradient-to-r from-[#ec4952] to-[#ff967c]" />
+        <section className="overflow-hidden rounded-2xl border border-[#E9E1D9] bg-white shadow-sm">
+          <div className="h-28 bg-gradient-to-r from-[#253B35] via-[#456354] to-[#B84C50]" />
 
           <div className="px-5 pb-6 sm:px-8">
             <div className="-mt-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="flex items-end gap-4">
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border-4 border-white bg-[#202522] text-3xl font-bold text-white shadow-sm">
-                  {initials || "C"}
-                </div>
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt={name}
+                    className="h-24 w-24 shrink-0 rounded-2xl border-4 border-white object-cover shadow-sm"
+                  />
+                ) : (
+                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border-4 border-white bg-[#253B35] text-3xl font-bold text-white shadow-sm">
+                    {initials || "C"}
+                  </div>
+                )}
 
                 <div className="pb-1">
-                  <h2 className="text-xl font-bold text-[#202522]">
+                  <h2 className="text-xl font-bold text-[#253B35]">
                     {name}
                   </h2>
+
                   <p className="mt-1 text-sm text-[#737873]">
                     CityPulse Community Member
                   </p>
                 </div>
               </div>
 
-              <span className="w-fit rounded-full bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700">
+              <span className="w-fit rounded-full bg-[#E8EFE9] px-3 py-1.5 text-xs font-semibold text-[#355747]">
                 ● Account active
               </span>
             </div>
 
             {/* Account details */}
             <div className="mt-7 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-xl bg-[#fafaf8] p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-[#8a8e89]">
+              <div className="rounded-xl bg-[#FAF8F3] p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-[#85877F]">
                   Full name
                 </p>
-                <p className="mt-2 font-medium text-[#202522]">
+
+                <p className="mt-2 break-words font-medium text-[#253B35]">
                   {name}
                 </p>
               </div>
 
-              <div className="rounded-xl bg-[#fafaf8] p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-[#8a8e89]">
-                  Mobile number
+              <div className="rounded-xl bg-[#FAF8F3] p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-[#85877F]">
+                  Email address
                 </p>
-                <p className="mt-2 font-medium text-[#202522]">
-                  {user.mobile || "Not provided"}
+
+                <p className="mt-2 break-all font-medium text-[#253B35]">
+                  {user.email || "Not provided"}
                 </p>
               </div>
             </div>
@@ -146,31 +235,69 @@ const ProfilePage = () => {
         </section>
 
         {/* Contribution statistics */}
-        <section className="mt-6">
-          <h2 className="mb-3 text-lg font-semibold text-[#202522]">
-            Your contributions
-          </h2>
+        <section className="mt-7">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-lg font-bold text-[#253B35]">
+              Your contributions
+            </h2>
+
+            {reportsLoading && (
+              <RefreshCw
+                size={16}
+                className="animate-spin text-[#85877F]"
+              />
+            )}
+          </div>
+
+          {reportsError && (
+            <p
+              role="alert"
+              className="mb-3 rounded-xl border border-[#E9B8B5] bg-[#FAECEA] p-3 text-sm text-[#A43E46]"
+            >
+              {reportsError}
+            </p>
+          )}
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-[#e8e9e4] bg-white p-5">
-              <p className="text-sm text-[#737873]">Reports submitted</p>
-              <p className="mt-2 text-3xl font-bold text-[#202522]">
-                {myIssues.length}
+            <div className="rounded-2xl border border-[#E9E1D9] bg-white p-5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E8EFE9] text-[#355747]">
+                <FileText size={20} />
+              </div>
+
+              <p className="mt-4 text-sm text-[#737873]">
+                Reports submitted
+              </p>
+
+              <p className="mt-2 text-3xl font-bold text-[#253B35]">
+                {reportsLoading ? "—" : myIssues.length}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-[#e8e9e4] bg-white p-5">
-              <p className="text-sm text-[#737873]">Resolved reports</p>
-              <p className="mt-2 text-3xl font-bold text-green-600">
-                {resolvedCount}
+            <div className="rounded-2xl border border-[#E9E1D9] bg-white p-5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E8EFE9] text-[#28734B]">
+                <span className="text-xl font-bold">✓</span>
+              </div>
+
+              <p className="mt-4 text-sm text-[#737873]">
+                Resolved reports
+              </p>
+
+              <p className="mt-2 text-3xl font-bold text-[#28734B]">
+                {reportsLoading ? "—" : resolvedCount}
               </p>
             </div>
 
-            <div className="col-span-2 rounded-2xl border border-[#e8e9e4] bg-white p-5 sm:col-span-1">
-              <p className="text-sm text-[#737873]">City</p>
-              <p className="mt-2 text-xl font-bold text-[#202522]">
+            <div className="col-span-2 rounded-2xl border border-[#E9E1D9] bg-white p-5 sm:col-span-1">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7E9E5] text-[#A84346]">
+                <MapPin size={20} />
+              </div>
+
+              <p className="mt-4 text-sm text-[#737873]">City</p>
+
+              <p className="mt-2 text-xl font-bold text-[#253B35]">
                 Jaipur
               </p>
+
               <p className="mt-1 text-xs text-[#737873]">
                 Rajasthan, India
               </p>
@@ -179,66 +306,83 @@ const ProfilePage = () => {
         </section>
 
         {/* Quick actions */}
-        <section className="mt-6 rounded-2xl border border-[#e8e9e4] bg-white p-5 sm:p-6">
-          <h2 className="text-lg font-semibold text-[#202522]">
+        <section className="mt-7 rounded-2xl border border-[#E9E1D9] bg-white p-5 sm:p-6">
+          <h2 className="text-lg font-bold text-[#253B35]">
             Quick actions
           </h2>
 
-          <div className="mt-4 flex flex-col gap-3">
-            <Link
-              to="/my-reports"
-              className="flex items-center justify-between rounded-xl border border-[#e8e9e4] p-4 transition hover:bg-[#fafaf8]"
-            >
-              <div>
-                <p className="font-medium text-[#202522]">
-                  View my reports
-                </p>
-                <p className="mt-1 text-sm text-[#737873]">
-                  Check the status of your submissions.
-                </p>
-              </div>
-              <span className="text-lg text-[#737873]">→</span>
-            </Link>
+          <p className="mt-1 text-sm text-[#737873]">
+            Jump straight to the things you use most.
+          </p>
 
-            <Link
-              to="/report"
-              className="flex items-center justify-between rounded-xl border border-[#e8e9e4] p-4 transition hover:bg-[#fafaf8]"
-            >
-              <div>
-                <p className="font-medium text-[#202522]">
-                  Report a city problem
-                </p>
-                <p className="mt-1 text-sm text-[#737873]">
-                  Help make Jaipur a better place.
-                </p>
-              </div>
-              <span className="text-lg text-[#737873]">→</span>
-            </Link>
+          <div className="mt-4 flex flex-col gap-3">
+            {quickActions.map((action) => {
+              const ActionIcon = action.icon;
+
+              return (
+                <Link
+                  key={action.to}
+                  to={action.to}
+                  className="group flex items-center justify-between gap-4 rounded-xl border border-[#E9E1D9] bg-[#FFFCF8] p-4 transition hover:border-[#D8B5AD] hover:bg-[#F7E9E5]"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${action.iconClass}`}
+                    >
+                      <ActionIcon size={20} strokeWidth={1.8} />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="font-semibold text-[#253B35]">
+                        {action.title}
+                      </p>
+
+                      <p className="mt-1 text-sm leading-5 text-[#737873]">
+                        {action.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className="text-xl text-[#85877F] transition group-hover:translate-x-1 group-hover:text-[#A84346]">
+                    →
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </section>
 
         {/* Account actions */}
-        <section className="mt-6 rounded-2xl border border-red-100 bg-white p-5 sm:p-6">
-          <h2 className="font-semibold text-[#202522]">
-            Account actions
-          </h2>
+        <section className="mt-6 rounded-2xl border border-[#E9D5D0] bg-white p-5 sm:p-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FAECEA] text-[#A84346]">
+              <LogOut size={19} />
+            </div>
 
-          <p className="mt-2 text-sm leading-6 text-[#737873]">
-            Sign out of your current CityPulse account on this browser.
-          </p>
+            <div>
+              <h2 className="font-bold text-[#253B35]">
+                Account actions
+              </h2>
+
+              <p className="mt-1 text-sm text-[#737873]">
+                Sign out of your CityPulse account on this browser.
+              </p>
+            </div>
+          </div>
 
           <button
             type="button"
             onClick={handleLogout}
-            className="mt-4 rounded-xl border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+            disabled={logoutLoading}
+            className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl border border-[#E9B8B5] px-5 py-2.5 text-sm font-semibold text-[#A84346] transition hover:bg-[#FAECEA] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Log out
+            <LogOut size={16} />
+            {logoutLoading ? "Logging out..." : "Log out"}
           </button>
         </section>
 
-        <p className="mt-5 text-center text-xs leading-5 text-[#8a8e89]">
-          CityPulse prototype · Account details are stored locally in this
-          browser.
+        <p className="mt-5 text-center text-xs leading-5 text-[#85877F]">
+          CityPulse prototype · Your account is managed by Firebase.
         </p>
       </div>
     </div>

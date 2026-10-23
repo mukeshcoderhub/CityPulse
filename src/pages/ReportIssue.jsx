@@ -1,7 +1,8 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCurrentUser } from "../utils/auth";
-import { createIssue } from "../utils/issues";
+import { useAuth } from "../context/AuthContext";
+import { createReport } from "../services/reportService";
 import MapPicker from "../components/MapPicker";
 
 const categories = [
@@ -33,6 +34,7 @@ const compressImage = (file) =>
         canvas.height = Math.round(img.height * scale);
 
         const context = canvas.getContext("2d");
+
         if (!context) {
           reject(new Error("Could not process this image."));
           return;
@@ -52,7 +54,7 @@ const compressImage = (file) =>
 
 const ReportIssue = () => {
   const navigate = useNavigate();
-  const currentUser = getCurrentUser();
+  const { user } = useAuth();
 
   const [form, setForm] = useState({
     title: "",
@@ -89,7 +91,7 @@ const ReportIssue = () => {
     event.preventDefault();
     setError("");
 
-    if (!currentUser) {
+    if (!user) {
       navigate("/login");
       return;
     }
@@ -109,22 +111,24 @@ const ReportIssue = () => {
     try {
       const image = await compressImage(imageFile);
 
-      createIssue({
+      await createReport({
         ...form,
         location,
-        image,
-        authorId: currentUser.id ?? currentUser.uid,
-        authorName: currentUser.name || "Community member",
+        imageUrl: image,
+        authorId: user.uid,
+        authorName: user.displayName || "Community member",
       });
 
       navigate("/explore");
     } catch (err) {
-      console.error(err);
+      console.error("Report submission failed:", err);
 
       setError(
-        err?.name === "QuotaExceededError"
-          ? "Browser storage is full. Try a smaller photo or clear old demo reports."
-          : err.message || "Unable to submit this report."
+        err?.code === "permission-denied"
+          ? "You don't have permission to submit this report. Please sign in again and check the Firebase rules."
+          : err?.name === "QuotaExceededError"
+            ? "Browser storage is full. Please try another image."
+            : err.message || "Unable to submit this report."
       );
     } finally {
       setLoading(false);
@@ -235,6 +239,7 @@ const ReportIssue = () => {
 
               if (file && !file.type.startsWith("image/")) {
                 setError("Please choose a valid image.");
+                event.target.value = "";
                 setImageFile(null);
                 return;
               }
@@ -252,13 +257,17 @@ const ReportIssue = () => {
               className="mt-4 max-h-72 w-full rounded-xl border object-cover"
             />
           )}
+
           <p className="mt-2 text-xs text-[#737873]">
-            Maximum file size: 10 MB. Images are compressed before saving.
+            Maximum file size: 10 MB. Images are compressed before submission.
           </p>
         </div>
 
         {error && (
-          <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <p
+            role="alert"
+            className="rounded-lg bg-red-50 p-3 text-sm text-red-700"
+          >
             {error}
           </p>
         )}
