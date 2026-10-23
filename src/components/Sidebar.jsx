@@ -1,3 +1,4 @@
+
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -11,8 +12,8 @@ import {
 import { useEffect, useState } from "react";
 
 const links = [
-  { name: "Dashboard", path: "/", icon: LayoutDashboard },
   { name: "Explore Issues", path: "/explore", icon: Search },
+  { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { name: "Report an Issue", path: "/report", icon: Plus },
   { name: "City Map", path: "/map", icon: MapPinned },
   { name: "My Reports", path: "/my-reports", icon: FileText },
@@ -47,7 +48,9 @@ const JaipurCarousel = () => {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setActiveIndex((current) => (current + 1) % jaipurPhotos.length);
+      setActiveIndex(
+        (current) => (current + 1) % jaipurPhotos.length
+      );
     }, 3000);
 
     return () => clearInterval(timer);
@@ -63,7 +66,9 @@ const JaipurCarousel = () => {
             alt={`Jaipur view ${index + 1}`}
             loading="lazy"
             className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
-              activeIndex === index ? "opacity-100" : "opacity-0"
+              activeIndex === index
+                ? "opacity-100"
+                : "opacity-0"
             }`}
           />
         ))}
@@ -82,16 +87,21 @@ const Sidebar = ({ onNavigate }) => {
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#A46C60]">
           Your workspace
         </p>
-        <p className="mt-1 text-xs text-[#85877F]">Your city, your voice.</p>
+        <p className="mt-1 text-xs text-[#85877F]">
+          Your city, your voice.
+        </p>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1.5" aria-label="Main navigation">
+      <nav
+        className="flex-1 space-y-1.5"
+        aria-label="Main navigation"
+      >
         {links.map(({ name, path, icon: Icon }) => (
           <NavLink
             key={path}
             to={path}
-            end={path === "/"}
+            end
             onClick={onNavigate}
             className={({ isActive }) =>
               `group relative flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] transition-all duration-200 ${
