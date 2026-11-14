@@ -1,19 +1,36 @@
-# React + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# 🏙️ CityPulse – A Civic Issue Reporting Platform
 
-Currently, two official plugins are available:
+CityPulse is a web platform that allows citizens to report, explore, and track civic issues in their city. It aims to connect communities and encourage public participation in solving local problems.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Built during a **24-hour hackathon organized by JU TechFest at JECRC University, Jaipur**.
 
-## React Compiler
+## 🚀 Features
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+- **Report Issues** – Upload civic problems with images, descriptions, categories, and locations.
+- **Explore Issues** – View and interact with issues reported by other citizens.
+- **Community Voting** – Vote on issues to help identify genuine problems.
+- **City Dashboard** – Visualize city-wide issues through statistics and charts.
+- **Interactive Map** – Explore reported issues on a city map.
+- **User Profiles** – Manage personal reports and track contributions.
+- **Leaderboard** – Rank users based on their civic contributions.
 
-Note: This will impact Vite dev & build performances.
-You can also try [the experimental native React Compiler support in plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#rust-react-compiler) by using `compiler: true` in the plugin options instead of using the Babel plugin.
+## 🛠️ Tech Stack
 
-## Expanding the ESLint configuration
+- **Frontend:** React.js, Tailwind CSS, Vite
+- **Database:** Firebase Firestore
+- **Authentication:** Firebase Google Authentication
+- **Routing:** React Router DOM
+- **Deployment:** Vercel
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🎯 Our Mission
+
+To make cities cleaner, safer, and better by empowering citizens to raise their voices and contribute to positive change.
+
+## 🌐 Live Demo
+
+[Visit CityPulse](https://city-pulse-beryl.vercel.app/explore)
+
+---
+
+⭐ If you find this project interesting, consider giving it a star!
